@@ -2,12 +2,14 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class ScraperSettings:
-    base_url: str = "https://today.line.me/tw/v2/tab"
+class Settings:
+    base_url: str = "https://today.line.me/webapi/portal/page/"
     tabs: list[str] = field(default_factory=list)
 
+    listing_base_url: str = "https://today.line.me/api/v6/listings"
 
-scaper_settings = ScraperSettings(
+
+settings = Settings(
     tabs=[
         "top",
         "recommendation",

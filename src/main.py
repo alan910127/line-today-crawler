@@ -1,36 +1,33 @@
-import asyncio
-from typing import Iterable
+from pathlib import Path
 
-import httpx
-from bs4 import BeautifulSoup
-
-from .config import scaper_settings
-
-
-async def scrape_htmls(urls: Iterable[str]):
-    async with httpx.AsyncClient() as client:
-        tasks = (client.get(url) for url in urls)
-        responses: list[httpx.Response] = await asyncio.gather(*tasks)
-    return [res.text for res in responses]
+from .db import store_publishers
+from .decorator import make_sync
+from .service import fetch_listings, fetch_page_info
+from .utils import extract_publishers, extract_query_paths
 
 
+@make_sync
 async def main() -> None:
-    htmls = await scrape_htmls(
-        f"{scaper_settings.base_url}/{tab}" for tab in scaper_settings.tabs
-    )
+    # fetch all informations from line today api
+    page_info_json = await fetch_page_info()
 
-    all_media: set[str] = set()
+    # extract listings query paths in each complete information
+    listings_query_paths: list[str] = []
+    for page_info in page_info_json:
+        listings_query_paths.extend(extract_query_paths(page_info))
 
-    for html in htmls:
-        soup = BeautifulSoup(html, "html.parser")
+    # fetch listings (w/ id, type, items)
+    listings_json = await fetch_listings(listings_query_paths)
 
-        media_name_elements = soup.find_all(class_="articleMetaInfo-description")
+    # extract publisher names from listings
+    publisher_names: list[str] = []
+    for listing_entry in listings_json:
+        publisher_names.extend(extract_publishers(listing_entry))
 
-        for element in media_name_elements:
-            all_media.add(element.string)
-
-    print("\n".join(sorted(all_media)))
+    # store the result of fetched publisher names
+    output_path = Path("output") / "publishers.txt"
+    store_publishers(output_path, publisher_names)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
