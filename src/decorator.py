@@ -1,8 +1,13 @@
-import asyncio
-from typing import Awaitable, Callable, ParamSpec, TypeVar
+from __future__ import annotations
 
-P = ParamSpec("P")
-R = TypeVar("R")
+import asyncio
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Awaitable, Callable, ParamSpec, TypeVar
+
+    P = ParamSpec("P")
+    R = TypeVar("R")
 
 
 def make_sync(func: Callable[P, Awaitable[R]]) -> Callable[P, R]:
